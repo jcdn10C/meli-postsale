@@ -1,0 +1,15 @@
+# deps
+node_modules/
+# env
+.env
+.env.*
+# logs
+npm-debug.log*
+yarn-debug.log*
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+# build
+dist/
