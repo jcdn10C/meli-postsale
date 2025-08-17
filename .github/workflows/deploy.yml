@@ -1,0 +1,44 @@
+name: Deploy meli-postsale
+on:
+  push:
+    branches: [ "main" ]
+env:
+  PROJECT_ID: tranquil-wave-287609
+  REGION: southamerica-east1
+  SERVICE: meli-postsale
+  SA_EMAIL: run-meli-postsale@tranquil-wave-287609.iam.gserviceaccount.com
+  SECRET_NAME: meli-client-secret
+  REDIRECT_URI: https://meli-postsale-262732632185.southamerica-east1.run.app/meli/callback
+  IMAGE_URI: southamerica-east1-docker.pkg.dev/tranquil-wave-287609/cloud-run-source-deploy/meli-postsale:${{ github.sha }}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      - name: Build (Cloud Build)
+        run: gcloud builds submit --tag "${IMAGE_URI}"
+      - name: Deploy (Cloud Run)
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "${IMAGE_URI}" \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --service-account "$SA_EMAIL" \
+            --ingress all \
+            --set-env-vars "SITE_ID=MLB,MELI_APP_ID=8112296506527600,MELI_REDIRECT_URI=${REDIRECT_URI}" \
+            --update-secrets "MELI_CLIENT_SECRET=${SECRET_NAME}:latest"
+      - name: Public Invoker
+        run: |
+          gcloud run services add-iam-policy-binding "$SERVICE" \
+            --region "$REGION" \
+            --member="allUsers" \
+            --role="roles/run.invoker"
