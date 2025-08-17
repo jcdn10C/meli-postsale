@@ -1,0 +1,25 @@
+name: Make Cloud Run public
+on:
+  workflow_dispatch:
+
+jobs:
+  publicize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: tranquil-wave-287609
+      - name: Grant public invoker
+        run: |
+          gcloud run services add-iam-policy-binding meli-postsale \
+            --region=southamerica-east1 \
+            --member="allUsers" \
+            --role="roles/run.invoker"
+      - name: Set ingress all
+        run: |
+          gcloud run services update meli-postsale \
+            --region=southamerica-east1 \
+            --ingress=all
