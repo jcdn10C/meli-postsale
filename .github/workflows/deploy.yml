@@ -2,6 +2,7 @@ name: Deploy meli-postsale
 on:
   push:
     branches: [ "main" ]
+
 env:
   PROJECT_ID: tranquil-wave-287609
   REGION: southamerica-east1
@@ -10,6 +11,7 @@ env:
   SECRET_NAME: meli-client-secret
   REDIRECT_URI: https://meli-postsale-262732632185.southamerica-east1.run.app/meli/callback
   IMAGE_URI: southamerica-east1-docker.pkg.dev/tranquil-wave-287609/cloud-run-source-deploy/meli-postsale:${{ github.sha }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,8 +26,44 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-      - name: Build (Cloud Build)
-        run: gcloud builds submit --tag "${IMAGE_URI}"
+      - name: Configure docker auth for Artifact Registry
+        run: gcloud auth configure-docker southamerica-east1-docker.pkg.dev -q
+      - name: Buildcd "/f/Templates shopify/85 TEMAS/meli-postsale"
+cat > .github/workflows/deploy.yml << 'YAML'
+name: Deploy meli-postsale
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  PROJECT_ID: tranquil-wave-287609
+  REGION: southamerica-east1
+  SERVICE: meli-postsale
+  SA_EMAIL: run-meli-postsale@tranquil-wave-287609.iam.gserviceaccount.com
+  SECRET_NAME: meli-client-secret
+  REDIRECT_URI: https:meli-postsale-262732632185.southamerica-east1.run.appmelicallback
+  IMAGE_URI: southamerica-east1-docker.pkg.devtranquil-wave-287609cloud-run-source-deploymeli-postsale:${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actionscheckout@v4
+      - uses: google-github-actionsauth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actionssetup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      - name: Configure docker auth for Artifact Registry
+        run: gcloud auth configure-docker southamerica-east1-docker.pkg.dev -q
+      - name: Build and push image
+        run: |
+          docker build -t "${IMAGE_URI}" .
+          docker push "${IMAGE_URI}"
       - name: Deploy (Cloud Run)
         run: |
           gcloud run deploy "$SERVICE" \
@@ -41,4 +79,4 @@ jobs:
           gcloud run services add-iam-policy-binding "$SERVICE" \
             --region "$REGION" \
             --member="allUsers" \
-            --role="roles/run.invoker"
+            --role="rolesrun.invoker"
