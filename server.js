@@ -212,3 +212,84 @@ app.post("/meli/webhook", async (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log("Server ON:", PORT));
+app.get("/meli/auth", (_req, res) => {
+  if (!MELI_APP_ID || !MELI_REDIRECT_URI) {
+    return res.status(500).send("Configure MELI_APP_ID e MELI_REDIRECT_URI no ambiente.");
+  }
+  const url = new URL("https://auth.mercadolivre.com.br/authorization");
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id", MELI_APP_ID);
+  url.searchParams.set("redirect_uri", MELI_REDIRECT_URI);
+  url.searchParams.set("state", "mlb-postsale");
+  return res.redirect(url.toString());
+});
+
+app.get("/meli/callback", async (req, res) => {
+  try {
+    const { code, error, error_description, state, ping } = req.query;
+
+    if (error) {
+      console.error("OAuth ML ERRO:", error, error_description, "state:", state);
+      return res
+        .status(400)
+        .send(
+          `Erro do Mercado Livre:<br>error=${error}<br>error_description=${error_description}<br>state=${state || ""}`
+        );
+    }
+
+    if (ping === "ok") {
+      return res.status(200).send("Callback ok, mas sem 'code'. Tente iniciar a autorização em /meli/auth.");
+    }
+
+    if (!code) return res.status(400).send("code ausente");
+
+    const data = await exchangeCodeForToken(code);
+    console.log("Tokens salvos:", { user_id: data.user_id, expires_in: data.expires_in });
+    return res.send("Conectado ao Mercado Livre! Você já pode fechar esta janela.");
+  } catch (e) {
+    console.error("OAuth error:", e.message);
+    return res.status(500).send("Erro na autorização.");
+  }
+});
+
+// Raiz (ok)
+app.get("/", (_req, res) => res.send("OK - Impulso Alfa | ML pós-venda"));
+app.get("meliauth", (_req, res) => {
+  if (!MELI_APP_ID || !MELI_REDIRECT_URI) {
+    return res.status(500).send("Configure MELI_APP_ID e MELI_REDIRECT_URI no ambiente.");
+  }
+  const url = new URL("https:auth.mercadolivre.com.brauthorization");
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id", MELI_APP_ID);
+  url.searchParams.set("redirect_uri", MELI_REDIRECT_URI);
+  url.searchParams.set("state", "mlb-postsale");
+  return res.redirect(url.toString());
+});
+
+app.get("melicallback", async (req, res) => {
+  try {
+    const { code, error, error_description, state, ping } = req.query;
+
+    if (error) {
+      console.error("OAuth ML ERRO:", error, error_description, "state:", state);
+      return res
+        .status(400)
+        .send(
+          `Erro do Mercado Livre:<br>error=${error}<br>error_description=${error_description}<br>state=${state || ""}`
+        );
+    }
+
+    if (ping === "ok") {
+      return res.status(200).send("Callback ok, mas sem 'code'. Tente iniciar a autorização em meliauth.");
+    }
+
+    if (!code) return res.status(400).send("code ausente");
+
+    const data = await exchangeCodeForToken(code);
+    console.log("Tokens salvos:", { user_id: data.user_id, expires_in: data.expires_in });
+    return res.send("Conectado ao Mercado Livre! Você já pode fechar esta janela.");
+  } catch (e) {
+    console.error("OAuth error:", e.message);
+    return res.status(500).send("Erro na autorização.");
+  }
+});
